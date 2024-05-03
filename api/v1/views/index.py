@@ -1,31 +1,40 @@
 #!/usr/bin/python3
-'''create flask'''
+"""
+index
+"""
+
 from flask import jsonify
 from api.v1.views import app_views
+
 from models import storage
 
 
-@app_views.route('/status')
-def api_status():
-    """
-    JSON response
-    """
-    response = {'status': "OK"}
-    return jsonify(response)
-
-
-@app_views.route('/stats')
-def get_stats():
-    """
-
-    """
-    stats = {
-        'amenities': storage.count('Amenity'),
-        'cities': storage.count('City'),
-        'places': storage.count('Place'),
-        'reviews': storage.count('Review'),
-        'states': storage.count('State'),
-        'users': storage.count('User'),
+@app_views.route("/status", methods=['GET'], strict_slashes=False)
+def status():
+    """ get status """
+    data = {
+        "status": "OK"
     }
 
-    return jsonify(stats)
+    resp = jsonify(data)
+    resp.status_code = 200
+
+    return resp
+
+
+@app_views.route("/stats", methods=['GET'], strict_slashes=False)
+def stats():
+    """ stats of objects """
+    data = {
+        "amenities": storage.count("Amenity"),
+        "cities": storage.count("City"),
+        "places": storage.count("Place"),
+        "reviews": storage.count("Review"),
+        "states": storage.count("State"),
+        "users": storage.count("User"),
+    }
+
+    resp = jsonify(data)
+    resp.status_code = 200
+
+    return resp

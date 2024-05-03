@@ -1,82 +1,96 @@
 #!/usr/bin/python3
-'''create users'''
+"""
+users objects and operations
+"""
 from flask import jsonify, abort, request
-from models import storage
+from api.v1.views import app_views, storage
 from models.user import User
-from api.v1.views import app_views
 
 
-@app_views.route('/users', strict_slashes=False)
+@app_views.route("/users", methods=["GET"], strict_slashes=False)
 def get_users():
-    """ list users """
+    """
+    get all users
+    """
+    user_list = []
+    user_obj = storage.all("User")
+    for obj in user_obj.values():
+        user_list.append(obj.to_json())
 
-    user = storage.all(User).values()
-    return jsonify([user.to_dict() for user in user])
-
-
-@app_views.route('/users/<user_id>', strict_slashes=False)
-def gets_user(user_id):
-    """ list user """
-
-    user = storage.all(User, user_id)
-    if user:
-        return jsonify(user.to_dict())
-    else:
-        return abort(404)
+    return jsonify(user_list)
 
 
-@app_views.route('/users/<user_id>',
-                 methods=['DELETE'], strict_slashes=False)
-def delete_user(user_id):
-    """ delete user """
-
-    user = storage.all(User, user_id)
-    if user:
-        storage.delete(user)
-        storage.save()
-        return jsonify({}), 200
-    else:
-        return abort(404)
-
-
-@app_views.route('/users',
-                 methods=['POST'], strict_slashes=False)
+@app_views.route("/users", methods=["POST"], strict_slashes=False)
 def create_user():
-    """ add user """
-    if request.content_type != 'application/json':
-        return abort(400, 'Not JSON')
-    if not request.get_json():
-        return abort(400, 'Not JSON')
-    data = request.get_json()
-    if 'email' not in data:
-        return abort(400, 'Enter email')
-    if 'password' not in data:
-        return abort(400, 'Enter Password')
+    """
+    create user
+    """
+    user_json = request.get_json(silent=True)
+    if user_json is None:
+        abort(400, 'Not a JSON')
+    if "email" not in user_json:
+        abort(400, 'Missing email')
+    if "password" not in user_json:
+        abort(400, 'Missing password')
 
-    user = User(**data)
-    user.save()
+    new_user = User(**user_json)
+    new_user.save()
+    resp = jsonify(new_user.to_json())
+    resp.status_code = 201
 
-    return jsonify(user.to_dict()), 200
+    return resp
 
 
-@app_views.route('/users/<user_id>',
-                 methods=['PUT'], strict_slashes=False)
+@app_views.route("/users/<user_id>",  methods=["GET"], strict_slashes=False)
+def get_user(user_id):
+    """
+    get user
+    """
+
+    fetched_obj = storage.get("User", str(user_id))
+
+    if fetched_obj is None:
+        abort(404)
+
+    return jsonify(fetched_obj.to_json())
+
+
+@app_views.route("/users/<user_id>",  methods=["PUT"], strict_slashes=False)
 def update_user(user_id):
-    """ add user """
-    user = storage.get(User, user_id)
-    if user:
-        if not request.get_json():
-            return abort(404, ' not JSON')
-        if request.content_type != 'application/json':
-            return abort(404, 'not JSON')
-        data = request.get_json()
+    """
+    update user
+    """
+    user_json = request.get_json(silent=True)
 
-        ignore_keys = ['id,' 'created_at', 'updated_at']
+    if user_json is None:
+        abort(400, 'Not a JSON')
 
-        for key, value in data.items():
-            if key not in ignore_keys:
-                setattr(user, key, value)
-        user.save()
-        return jsonify(user.to_dict()), 200
-    else:
-        return abort(404)
+    fetched_obj = storage.get("User", str(user_id))
+
+    if fetched_obj is None:
+        abort(404)
+
+    for key, val in user_json.items():
+        if key not in ["id", "created_at", "updated_at", "email"]:
+            setattr(fetched_obj, key, val)
+
+    fetched_obj.save()
+
+    return jsonify(fetched_obj.to_json())
+
+
+@app_views.route("/users/<user_id>",  methods=["DELETE"], strict_slashes=False)
+def delete_user(user_id):
+    """
+    delete users
+    """
+
+    fetched_obj = storage.get("User", str(user_id))
+
+    if fetched_obj is None:
+        abort(404)
+
+    storage.delete(fetched_obj)
+    storage.save()
+
+    return jsonify({})
